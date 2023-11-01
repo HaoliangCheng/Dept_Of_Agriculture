@@ -37,7 +37,6 @@ class LightMonitor(Monitor):
     def perceive(self):
         # BEGIN STUDENT CODE
         self.light = self.sensordata['light'] 
-        self.last_time = self.sensordata['unix_time']
         self.mtime = self.sensordata['midnight_time']
         # END STUDENT CODE
         pass

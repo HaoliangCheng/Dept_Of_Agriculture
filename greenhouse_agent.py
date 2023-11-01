@@ -6,6 +6,7 @@ import greenhouse_behaviors as gb
 import ping_behavior as ping
 import camera_behavior 
 import email_behavior as em
+##import light_monitor as lm
 import logging_monitor
 
 def init_ros(sim, name):
@@ -70,7 +71,6 @@ class LayeredGreenhouseAgent:
 
     def __init__(self,sim,schedulefile):
         init_ros(sim, 'greenhouseagent_layered')
-
         # Initialize the architecture:
         # As with the behavioral agent, initialize ROSSensors, ROSActuators,
         #  and all behaviors, save each of them as instance variables, and
@@ -81,10 +81,10 @@ class LayeredGreenhouseAgent:
         #  connect the behavioral and planning layers to the executive, and
         #  the executive to the planning layer.
         # Don't forget to have the planning layer invoke getNewSchedule
+        
         self.sensors = ros_hardware.ROSSensors()
         # BEGIN STUDENT CODE
         self.actuators = ros_hardware.ROSActuators() 
-       
         self.Light = gb.Light()
         self.RaiseTemp = gb.RaiseTemp()
         self.LowerTemp =gb.LowerTemp()
@@ -93,7 +93,7 @@ class LayeredGreenhouseAgent:
         self.LowerSMoist =gb.LowerSMoist()
         self.Ping =ping.Ping()
         self.Camera=camera_behavior.TakeImage()
-        self.Email=em.Email(self.Camera)
+        self.Email=em.Email(self.Camera, self.RaiseSMoist)
         
         self.behaviors=[self.Light,self.RaiseTemp,self.LowerTemp,self.LowerHumid,self.RaiseSMoist,self.LowerSMoist,self.Ping,self.Camera,self.Email]
         

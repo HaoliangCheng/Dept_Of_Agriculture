@@ -7,16 +7,19 @@ Created on Sun Aug 27 23:49:21 2023
 
 import smtplib
 from email.message import EmailMessage
+import ssl
 
 def init(sender, password):
     port = 587
     host = "smtp.office365.com"
     timeout = 2.5 # Seconds
-    server = smtplib.SMTP(host, port, timeout=timeout) 
-    server.ehlo()
-    server.starttls()
-    server.login(sender, password)
-    return server
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+    connection = smtplib.SMTP('smtp-mail.outlook.com', 587, timeout)
+    connection.ehlo()
+    connection.starttls(context=context)
+
+    connection.login(sender, password)
+    return connection
 
 """
 ****************************** PARAMETERS ***********************************
@@ -37,7 +40,7 @@ def send(from_address, password, to_address, subject, text, images: list = [], i
     try:
         server = init(from_address, password)
     except Exception as e:
-        print("Failed to send: %s" %e)
+        print("Failed to init: %s" %e)
         return False
 
     msg = EmailMessage()

@@ -2,6 +2,8 @@ from behavior import *
 from limits import *
 from transitions import Machine
 
+import send_email
+
 #sensor data passed into greenhouse behaviors:
 #  [time, lightlevel, temperature, humidity, soilmoisture, waterlevel]
 #actuators are looking for a dictionary with any/all of these keywords:
@@ -283,80 +285,110 @@ Soil moisture should be greater than the lower limit
 class RaiseSMoist(Behavior):
 
     def __init__(self):
-        super(RaiseSMoist, self).__init__("RaiseMoistBehavior") #Behavior sets reasonable defaults
-        self.state = "halt"
+        super(RaiseSMoist, self).__init__("RaiseMoistBehavior")
         self.weight = 0
         self.weight_window = []
         self.smoist_window = []
         self.total_water = 0
-        self.waterlevel = 0
+        self.water_level = 0
+        self.start_weight = 0
         self.last_time = 24*60*60 # Start with the prior day
         self.daily_limit = 100 #100
-        self.moisture_opt = optimal["moisture"][0]
-        
-        
-    def setInitial(self, state):
-        self.state = state
-        
-    def enable(self):
-        self.setInitial("init")
-        self.setPump(False)
-        self.setTimer(10) # Give the sliding windows time to average out
+        self.moisture_opt = optimal["moisture"][1]
+        self.last_watered_time = None
+        self.last_moisture = None
 
-    def disable(self):
-        self.setInitial("halt")
-        self.setPump(False)
-        self.setLastTime()
+        # STUDENT CODE: Modify these lines to use your own initial state name
+        #               and add all your FSM states
+        self.initial = 'halt'
+        self.states = [self.initial, 'init', 'waiting', 'watering', 'measuring', 'done']
+        self.fsm = Machine(self, states=self.states, initial=self.initial,
+                           ignore_invalid_triggers=True)
+
+        # Add FSM transitions and actions
+        # BEGIN STUDENT self.fsm.add_transition('enable', 'halt', 'toohumid', conditions = ["istoohumid"], after="settrue")
+        self.fsm.add_transition('enable', 'halt', 'init', after=["setfalse", "setTimer10"])
+
+
+        self.fsm.add_transition('disable', 'done', 'halt',before = ["setfalse", "setLastTime"])
+        self.fsm.add_transition('disable', 'waiting', 'halt',before = ["setfalse", "setLastTime"])
+        self.fsm.add_transition('disable', 'watering', 'halt',before = ["setfalse", "setLastTime"])
+        self.fsm.add_transition('disable', 'measuring', 'halt',before = ["setfalse", "setLastTime"])
+        self.fsm.add_transition('doStep', 'init', 'init',conditions = ["nextday"],after="resetTotalWater")
+        self.fsm.add_transition('doStep', 'init', 'waiting',conditions = ["timeup"])
+
+        self.fsm.add_transition('doStep', 'waiting', 'done',conditions = ["wateredenough"], after="printWateredEnough")
+        self.fsm.add_transition('doStep', 'waiting', 'waiting',conditions = ["notenoughwater"], after="printNotEnoughWater")
+        self.fsm.add_transition('doStep', 'waiting', 'done',conditions = ["moistenough"], after="printMoistEnough")
+        self.fsm.add_transition('doStep', 'waiting', 'watering',conditions = ["notmoistenough"], after="watersoil")
+        # default watering behavior (safety net) if it's been 3 days since last watering
+        self.fsm.add_transition('doStep', 'waiting', 'watering',conditions = ["toolongsincelastwater"], after="watersoil")
+        self.fsm.add_transition('doStep', 'watering', 'measuring',conditions = ["timeup"], after=["setfalse", "setTimer20"])
         
+        self.fsm.add_transition('doStep', 'measuring', 'waiting',conditions = ["timeup"], after="calcWaterAdded")
+        
+        
+        
+        # END STUDENT CODE
+    def printNotEnoughWater(self):
+        print("NOT ENOUGH WATER IN RESERVOIR")
+
+    def printMoistEnough(self):
+        print(f"Soil is moist enough {self.smoist_est}")
+    def timeup(self):
+        return self.time >= self.waittime
+    
+    def moistenough(self):
+        return self.smoist_est >= self.moisture_opt
+    def notmoistenough(self):
+        return not self.moistenough()
+    def toolongsincelastwater(self):
+        # default watering behavior if init or 3 days since last watering
+        if self.last_watered_time == None or self.time - self.last_watered_time > 86400 * 3:
+            print("It's been too long since we last watered -- watering now!")
+            return True
+        return False
+    def wateredenough(self):
+        return self.total_water >= self.daily_limit
+    def notenoughwater(self):
+        return self.water_level < 30
+    
+    def nextday(self):
+        return self.last_time > self.mtime
+    
+    def setfalse(self):
+        self.setPump(False)
+    def watersoil(self):
+        print(f"Soil too dry {self.smoist_est} - need to water")
+        self.last_watered_time = self.time
+        self.last_moisture = self.smoist
+        self.start_weight = self.weight_est
+        self.setTimer10()
+        self.setPump(True)
     def sliding_window(self, window, item, length=4):
-        if (len(window) == 0):
-            window = [item]*length
-        else:
-            window = window[1:]
-            window.append(item)
-        return window, sum(window)/float(length)
+        if (len(window) == length): window = window[1:]
+        window.append(item)
+        return window, sum(window)/float(len(window))
     
     def perceive(self):
         self.time = self.sensordata["unix_time"]
         self.mtime = self.sensordata["midnight_time"]
-        self.waterLevel = self.sensordata["level"]
+        self.water_level = self.sensordata["level"]
         self.weight = self.sensordata["weight"]
         self.weight_window, self.weight_est = self.sliding_window(self.weight_window, self.weight)
         self.smoist = self.sensordata["smoist"]
         self.smoist_window, self.smoist_est = self.sliding_window(self.smoist_window, self.smoist)
 
     def act(self):
-        if self.state == "init":
-            if self.last_time > self.mtime: #it's the next day
-                print("Next day!")
-                self.resetTotalWater()
-            elif self.time >= self.waittime: #time is up
-                self.state = "waiting"
-        elif self.state == "waiting":
-            if self.total_water >= self.daily_limit: #watered enough
-                self.printWateredEnough()
-                self.state = "done"
-            elif self.waterLevel < 30: #not enough water in reservoir
-                print("NOT ENOUGH WATER IN RESERVOIR")
-            elif self.smoist_est >= self.moisture_opt: #soil is moist enough
-                print("Soil is moist enough (%s)" %self.smoist_est)
-                self.state = "done"
-            elif self.smoist_est < self.moisture_opt: #soil is too dry
-                print("Soil too dry (%s) - need to water" %self.smoist_est)
-                self.start_weight = self.weight_est
-                self.setTimer10()
-                self.setPump(True)
-                self.state = "watering"
-        elif self.state == "watering":
-            if self.time >= self.waittime: #time is up
-               self.setPump(False)
-               self.setTimer20()
-               self.state = "measuring"
-        elif self.state == "measuring":
-            if self.time >= self.waittime: #time is up
-                self.calcWaterAdded()
-                self.state = "waiting"
-                
+        # Use 'doStep' trigger for all other transitions
+        self.trigger("doStep")
+
+    # Add all your condition functions here
+    # BEGIN STUDENT CODE
+    # END STUDENT CODE
+        
+    # Add all your before / after action functions here
+    # BEGIN STUDENT CODE
     def setTimer(self, wait):
         self.waittime = self.time + wait
         #print("setTimer: %d (%d)" %(self.waittime, wait))
@@ -368,6 +400,20 @@ class RaiseSMoist(Behavior):
         print("Resetting total water")
         self.total_water = 0
         self.setLastTime()
+    def send_watering_email(self, dwater):
+        from_address = "TerraBot8@outlook.com"
+        password = "ODonnell459"
+        to_address = "hongsng@andrew.cmu.edu, haolian2@andrew.cmu.edu, yichenzh@andrew.cmu.edu"
+        subject = f"Plants were just watered."
+        text = f''' 
+        Previous watering: {self.last_watered_time},
+        Previous moisture: {self.last_moisture}, 
+        Current moisture: {self.smoist},
+        Watered amount: {dwater},
+        Water Level Left: {self.water_level},
+        Total Water added: {self.total_water}      
+'''     
+        send_email.send(from_address, password, to_address, subject, text, images = [], instructors = False)
 
     def calcWaterAdded(self):
         dwater = self.weight_est - self.start_weight # ml of water weighs a gram
@@ -377,18 +423,16 @@ class RaiseSMoist(Behavior):
         self.total_water += dwater
         print("calcWaterAdded: %.1f (%.1f = %.1f - %.1f)"
               %(self.total_water, dwater, self.weight_est, self.start_weight))
-        
+        # send email with information
+        # self.send_watering_email(dwater)
     def printWateredEnough(self):
         print("Watered Enough: %.1f" %self.total_water)
 
-    def emailNoWater(self): # Email TBD
-        print("NOT ENOUGH WATER IN RESERVOIR")
+    # END STUDENT CODE
 
     def setPump(self,state):
         self.actuators.doActions((self.name, self.sensors.getTime(),
                                   {"wpump": state}))
-        
-
 """
 Soil moisture below the upper limit
 """
