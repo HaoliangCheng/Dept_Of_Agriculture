@@ -1,8 +1,10 @@
+LightBehavior	04:30-05:00
 LightBehavior	09:00-12:00
 LightBehavior	13:00-16:00
 LightBehavior	17:00-20:00
 LightBehavior	21:00-22:00
 
+RaiseTempBehavior 04:00-04:30
 RaiseTempBehavior 08:00-08:30
 RaiseTempBehavior 12:00-12:30
 RaiseTempBehavior 16:00-16:30
