@@ -291,7 +291,7 @@ class RaiseSMoist(Behavior):
         self.total_water = 0
         self.waterlevel = 0
         self.last_time = 24*60*60 # Start with the prior day
-        self.daily_limit = 50 #100
+        self.daily_limit = 100 #100
         self.moisture_opt = optimal["moisture"][0]
         
         
