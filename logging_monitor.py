@@ -38,7 +38,12 @@ class LoggingMonitor(Monitor):
             f.write(f"TIME: {int(hour):02}:{int(minute):02}:{int(second):02}")
             
             for key in self.sensordata:
-                f.write(f", {key}: {self.sensordata[key]}")
+                if isinstance(self.sensordata[key], tuple):
+                    data_to_write = tuple(round(num, 2) for num in self.sensordata[key])
+                else:
+                    data_to_write = round(self.sensordata[key], 2)
+                f.write(f", {key}: {data_to_write}")
+                #f.write(f", {key}: {self.sensordata[key]}")
             for key in self.actuator_state:
                 f.write(f", {key}: {self.actuator_state[key]}")
             f.write("\n")
