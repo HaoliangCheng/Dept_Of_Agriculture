@@ -54,3 +54,4 @@ TakeImageBehavior 16:40-17:00
 TakeImageBehavior 20:40-21:00
 
 EmailBehavior 13:00-13:30
+EmailBehavior 20:00-20:30
