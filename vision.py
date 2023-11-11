@@ -27,7 +27,7 @@ def classifyFoliage(image):
     transformed = transformFromBGR(image, color)
     mask_hsv = createMask(transformed, rValsDict[color], color)
     # END STUDENT CODE
-    return mask_hsv 
+    return mask_hsv & mask_bgr
 
 # Return the bounding box of the measuring stick
 # You can either use the image to find the stick or determine the corners by hand,
