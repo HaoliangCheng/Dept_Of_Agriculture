@@ -321,7 +321,7 @@ class RaiseSMoist(Behavior):
         self.fsm.add_transition('doStep', 'waiting', 'waiting',conditions = ["notenoughwater"], after="printNotEnoughWater")
         self.fsm.add_transition('doStep', 'waiting', 'done',conditions = ["moistenough"], after="printMoistEnough")
         self.fsm.add_transition('doStep', 'waiting', 'watering',conditions = ["notmoistenough"], after="watersoil")
-        # default watering behavior (safety net) if it's been 3 days since last watering
+        # default watering behavior (safety net) if it's been 2 days since last watering
         self.fsm.add_transition('doStep', 'waiting', 'watering',conditions = ["toolongsincelastwater"], after="watersoil")
         self.fsm.add_transition('doStep', 'watering', 'measuring',conditions = ["timeup"], after=["setfalse", "setTimer20"])
         
@@ -343,8 +343,8 @@ class RaiseSMoist(Behavior):
     def notmoistenough(self):
         return not self.moistenough()
     def toolongsincelastwater(self):
-        # default watering behavior if init or 3 days since last watering
-        if self.last_watered_time == None or self.time - self.last_watered_time > 86400 * 3:
+        # default watering behavior if init or 2 days since last watering
+        if self.last_watered_time == None or self.time - self.last_watered_time > 86400 * 2:
             print("It's been too long since we last watered -- watering now!")
             return True
         return False
