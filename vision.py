@@ -77,14 +77,10 @@ def measureHeight(image, foliage_mask):
     height = max_row = None
     # BEGIN STUDENT CODE
     combined_mask = stick_mask & foliage_mask 
-    # createWindow()
-    # showImage('image',combined_mask)
-    # cv2.waitKey(0)
     max_row = np.unravel_index(combined_mask.argmax(), combined_mask.shape)[0]
     for index, element in enumerate(lines):
         if(max_row>=element and index != 0):
             height = ((lines[index-1]-max_row)/(lines[index-1]-element))+index-1
-            # print(height, max_row)
             return (height, max_row)  
         elif max_row < element and index == 9 and max_row!=0:
             return (10, max_row)   
