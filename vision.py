@@ -35,13 +35,13 @@ def classifyFoliage(image):
 def findStick (image):
     boundingBox = np.array([[0,0]])
     # BEGIN STUDENT CODE
-    top_left = [1960, 285]  #1950
-    top_right = [1980, 285] #2055
-    bottom_left = [1910, 2000] #1863
-    bottom_right = [1930, 2000]
+    top_left = [1672, 905]  
+    top_right = [1725, 905] 
+    bottom_left = [1692, 2033] 
+    bottom_right = [1751, 2033]
     
-    for x in range(1880, 2020):
-        for y in range(285, 2000):
+    for x in range(1672, 1751):
+        for y in range(905, 2033):
             if is_inside(top_left, bottom_left, bottom_right, top_right,(x, y)):
                 boundingBox=np.append(boundingBox, [[x, y]],axis=0)
     boundingBox=np.delete(boundingBox, [0,0],axis=0)
@@ -69,7 +69,7 @@ def measureHeight(image, foliage_mask):
     stick_mask = np.zeros(foliage_mask.shape[0:2], np.uint8)
     # BEGIN STUDENT CODE
     c = findStick(image)
-    lines=[2000,1850,1720,1555,1380,1200,1010,810,590,360]
+    lines=[1928,1836,1731,1626,1521,1400,1320,1250,1174,1043]
     stick_mask=cv2.drawContours(stick_mask, [c], 0, 255, -1)
     # END STUDENT CODE
     # Find the maximum height of plants that overlap the measuring stick
