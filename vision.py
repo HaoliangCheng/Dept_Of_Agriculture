@@ -35,13 +35,13 @@ def classifyFoliage(image):
 def findStick (image):
     boundingBox = np.array([[0,0]])
     # BEGIN STUDENT CODE
-    top_left = [1672, 905]  
-    top_right = [1725, 905] 
-    bottom_left = [1692, 2033] 
-    bottom_right = [1751, 2033]
+    top_left = [1685, 555]  
+    top_right = [1738, 555] 
+    bottom_left = [1692, 1836] 
+    bottom_right = [1751, 1836]
     
-    for x in range(1672, 1751):
-        for y in range(905, 2033):
+    for x in range(1685, 1751):
+        for y in range(555, 1836):
             if is_inside(top_left, bottom_left, bottom_right, top_right,(x, y)):
                 boundingBox=np.append(boundingBox, [[x, y]],axis=0)
     boundingBox=np.delete(boundingBox, [0,0],axis=0)
@@ -190,7 +190,7 @@ def foliageImages (image):
             if(point[1]==row):
                 line.append(point[0])
         image=cv2.line(image, (line[0],row),(line[-1],row),(0,0,255),20)
-    pts = np.array([[1950, 285],[2050, 285],[1940, 2000],[1880, 2000]], np.int32)
+    pts = np.array([[1685, 555],[1738, 555],[1751, 1836],[1692, 1836]], np.int32)
     pts = pts.reshape((-1,1,2))
     image=cv2.polylines(image,[pts],True,(255,0,0),10)
     # END STUDENT CODE
